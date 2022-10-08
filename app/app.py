@@ -4,6 +4,7 @@ from flask import Flask
 from flask_caching import Cache
 
 from cryptoService import CryptoService
+from decimalEncoder import DecimalEncoder
 
 config = {
     "DEBUG": True,
@@ -26,7 +27,7 @@ def transaction_fee(tx_hash):
     fee = service.get_transaction_fee(tx_hash)
 
     return app.response_class(
-        response=json.dumps({'transaction fee': fee}),
+        response=json.dumps({'transaction fee': fee}, cls=DecimalEncoder),
         status=200,
         mimetype='application/json'
     )
