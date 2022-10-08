@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from http import HTTPStatus
 
@@ -10,7 +11,7 @@ from config import *
 class CryptoService:
 
     @staticmethod
-    def get_transaction_fee(tx_hash):
+    def get_transaction_fee(tx_hash: str) -> Decimal:
         params = {
             'module': 'account',
             'action': 'tokentx',
@@ -38,19 +39,25 @@ class CryptoService:
         tx_cost_wei = int(float(result['gasPrice']) * float(result['gasUsed']))
         tx_cost_eth = Web3.fromWei(tx_cost_wei, "ether")
 
-        rate = CryptoService.__get_fx_rate()
+        time_string = CryptoService.__timestamp_to_dateTime(int(result['timeStamp']))
+        rate = CryptoService.__get_fx_rate(time_string)
         tx_cost_usdt = rate * tx_cost_eth
 
-        print(f"tx cost in USDT: {tx_cost_usdt}, tx cost in wei: {tx_cost_wei},"
-              f" tx cost in eth: {tx_cost_eth}, fx rate: {rate}")
+        print(f"tx cost - USDT: {tx_cost_usdt}, wei: {tx_cost_wei},"
+              f" eth: {tx_cost_eth}, fx rate: {rate}")
         return tx_cost_usdt
 
     @staticmethod
-    def __get_fx_rate():
-        return -1
+    def __get_fx_rate(time) -> Decimal:
+        # return Decimal(1300)
 
         headers = {'X-CoinAPI-Key': COIN_API_KEY}
-        response = requests.get(COIN_API_EXCHANGE_RATE_URL, headers=headers)
+        params = {'time': time}
+        response = requests.get(COIN_API_EXCHANGE_RATE_URL, params=params, headers=headers)
         response_json = response.json()
 
         return Decimal(response_json['rate'])
+
+    @staticmethod
+    def __timestamp_to_dateTime(timestamp: int) -> str:
+        return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%dT%H:%M:%SZ')
