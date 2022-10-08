@@ -1,10 +1,13 @@
 import json
+from http import HTTPStatus
 
 from flask import Flask
 from flask_caching import Cache
+from requests import HTTPError
 
 from cryptoService import CryptoService
 from decimalEncoder import DecimalEncoder
+from exceptions import TransactionNotFoundException
 
 config = {
     "DEBUG": True,
@@ -24,11 +27,24 @@ def index():
 @app.route("/transaction-fee/<tx_hash>", methods=['GET'])
 @cache.cached()
 def transaction_fee(tx_hash):
-    fee = service.get_transaction_fee(tx_hash)
+    try:
+        fee = service.get_transaction_fee(tx_hash)
+    except HTTPError as e:
+        return app.response_class(
+            response=json.dumps({'error': str(e)}),
+            status=e.response.status_code,
+            mimetype='application/json'
+        )
+    except TransactionNotFoundException as e:
+        return app.response_class(
+            response=json.dumps({'error': str(e)}),
+            status=HTTPStatus.BAD_REQUEST,
+            mimetype='application/json'
+        )
 
     return app.response_class(
         response=json.dumps({'transaction fee': fee}, cls=DecimalEncoder),
-        status=200,
+        status=HTTPStatus.OK,
         mimetype='application/json'
     )
 

@@ -1,22 +1,24 @@
 from datetime import datetime
 from decimal import Decimal
 from http import HTTPStatus
+from typing import Union
 
 import requests
 from web3 import Web3
 
 from config import *
+from exceptions import TransactionNotFoundException
 
 
 class CryptoService:
 
-    @staticmethod
-    def get_transaction_fee(tx_hash: str) -> Decimal:
+    @classmethod
+    def get_transaction_fee(cls, tx_hash: str) -> Union[int, Decimal]:
         params = {
             'module': 'account',
             'action': 'tokentx',
             'contractaddress': '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2',
-            'address': '0x4e83362442b8d1bec281594cea3050c8eb01311c',
+            'address': '0x4e83362442b8d1bec281594cea3050c8eb01311v',
             'page': 1,
             'offset': 100,
             'startblock': 0,
@@ -27,13 +29,11 @@ class CryptoService:
 
         response = requests.get(ETHER_SCAN_BASE_URL, params=params)
         if response.status_code != HTTPStatus.OK:
-            print("Error getting transaction details")
-            return -1
+            raise response.raise_for_status()
 
         response_json = response.json()
         if response_json['message'] == 'No transactions found':
-            print("Error")
-            return -1
+            raise TransactionNotFoundException(tx_hash)
 
         result = response_json['result'][0]
         tx_cost_wei = int(float(result['gasPrice']) * float(result['gasUsed']))
@@ -47,8 +47,8 @@ class CryptoService:
               f" eth: {tx_cost_eth}, fx rate: {rate}")
         return tx_cost_usdt
 
-    @staticmethod
-    def __get_fx_rate(time) -> Decimal:
+    @classmethod
+    def __get_fx_rate(cls, time) -> Decimal:
         # return Decimal(1300)
 
         headers = {'X-CoinAPI-Key': COIN_API_KEY}
