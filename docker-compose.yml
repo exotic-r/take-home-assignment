@@ -6,7 +6,12 @@ services:
       context: ./web/
     ports:
       - "8000:8000"
-
+  redis:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - "6379:6379"
   nginx:
     restart: always
     build: ./nginx/
