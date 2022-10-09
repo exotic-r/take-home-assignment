@@ -21,7 +21,7 @@ cache = Cache(app)
 
 @app.route('/')
 def index():
-    return 'Welcome to our app'
+    return 'Welcome to our flask app'
 
 
 @app.route("/transaction-fee/<tx_hash>", methods=['GET'])
@@ -55,5 +55,5 @@ def init_http_client():
     service = CryptoService()
 
 
-if __name__ == "__main__":
-    app.run(port=8080)
+# if __name__ == "__main__":
+#     app.run()
