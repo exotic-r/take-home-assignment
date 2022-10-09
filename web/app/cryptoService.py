@@ -44,7 +44,7 @@ class CryptoService:
         fee, _ = self.calculate_tx_fee(result['gasPrice'], result['gasUsed'], result['timeStamp'])
         return fee
 
-    def get_transaction_fee_by_time_range(self, start_time: int, end_time: int):
+    def get_transactions_fee_by_time_range(self, start_time: int, end_time: int):
         start_block, end_block = self.get_block_number(start_time), self.get_block_number(end_time)
 
         def request_fees(page_: int, offset_: int):

@@ -1,7 +1,7 @@
 import json
 import logging
-from http import HTTPStatus
 
+from http import HTTPStatus
 from flask import Flask, request
 from flask_caching import Cache
 from requests import HTTPError
@@ -66,7 +66,7 @@ def transaction_fee_by_time_range():
         )
 
     try:
-        fees = service.get_transaction_fee_by_time_range(int(start_time), int(end_time))
+        fees = service.get_transactions_fee_by_time_range(int(start_time), int(end_time))
 
         return app.response_class(
             response=json.dumps({'transaction fees': fees}, cls=DecimalEncoder),
