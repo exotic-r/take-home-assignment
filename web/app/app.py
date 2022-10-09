@@ -20,7 +20,9 @@ app = Flask(__name__)
 app.config.from_mapping(config)
 cache = Cache(app)
 
-logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+
 
 @app.route('/')
 def index():
@@ -51,6 +53,7 @@ def transaction_fee_by_tx_hash(tx_hash):
             mimetype='application/json'
         )
 
+
 @app.route("/transaction-fee", methods=['GET'])
 @cache.cached()
 def transaction_fee_by_time_range():
@@ -60,16 +63,19 @@ def transaction_fee_by_time_range():
 
     if not start_time or not end_time:
         return app.response_class(
-            response=json.dumps({'message': "Either query param start_time or end_time is not provided."}),
+            response=json.dumps(
+                {'message': "Either query param start_time or end_time is not provided."}),
             status=HTTPStatus.BAD_REQUEST,
             mimetype='application/json'
         )
 
     try:
-        fees = service.get_transactions_fee_by_time_range(int(start_time), int(end_time))
+        fees = service.get_transactions_fee_by_time_range(
+            int(start_time), int(end_time))
 
         return app.response_class(
-            response=json.dumps({'transaction fees': fees}, cls=DecimalEncoder),
+            response=json.dumps({'transaction fees': fees},
+                                cls=DecimalEncoder),
             status=HTTPStatus.OK,
             mimetype='application/json'
         )

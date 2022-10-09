@@ -41,26 +41,30 @@ class CryptoService:
             raise TransactionNotFoundException(tx_hash)
 
         result = response_json['result'][0]
-        fee, _ = self.calculate_tx_fee(result['gasPrice'], result['gasUsed'], result['timeStamp'])
+        fee, _ = self.calculate_tx_fee(
+            result['gasPrice'], result['gasUsed'], result['timeStamp'])
         return fee
 
     def get_transactions_fee_by_time_range(self, start_time: int, end_time: int):
-        start_block, end_block = self.get_block_number(start_time), self.get_block_number(end_time)
+        start_block, end_block = self.get_block_number(
+            start_time), self.get_block_number(end_time)
 
         def request_fees(page_: int, offset_: int):
-            params = CryptoService.get_ether_scan_params(start_block, end_block, page_, offset_)
+            params = CryptoService.get_ether_scan_params(
+                start_block, end_block, page_, offset_)
             response = requests.get(ETHER_SCAN_BASE_URL, params=params)
 
             response_json = response.json()
             if response_json['message'] == 'No transactions found':
-                raise TransactionNotFoundExceptionByTimeRange(start_time, end_time)
+                raise TransactionNotFoundExceptionByTimeRange(
+                    start_time, end_time)
 
             _fees = []
             status_code_ = None
 
             for result in response_json['result']:
                 fee, status_code_ = self.calculate_tx_fee(result['gasPrice'], result['gasUsed'],
-                                                                result['timeStamp'])
+                                                          result['timeStamp'])
                 _fees.append(fee)
             return _fees, status_code_
 
@@ -128,10 +132,12 @@ class CryptoService:
 
         headers = {'X-CoinAPI-Key': COIN_API_KEY}
         params = {'time': date_time}
-        response = requests.get(COIN_API_EXCHANGE_RATE_URL, params=params, headers=headers)
+        response = requests.get(
+            COIN_API_EXCHANGE_RATE_URL, params=params, headers=headers)
         if response.status_code != HTTPStatus.OK:
             if response.status_code == 550:
-                logging.error(f"Error retrieving fx rate for date time: {date_time}, returning fx rate 0")
+                logging.error(
+                    f"Error retrieving fx rate for date time: {date_time}, returning fx rate 0")
                 return Decimal(0), 550
             if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
                 logging.error(f"Error retrieving fx rate for date time: {date_time} due to too many requests, "
