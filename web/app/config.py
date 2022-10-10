@@ -5,3 +5,6 @@ ETHER_SCAN_BASE_URL = 'https://api.etherscan.io/api'
 # COIN API
 COIN_API_KEY = '40F8C96C-AD06-4EF2-B337-55989C889C98'
 COIN_API_EXCHANGE_RATE_URL = 'https://rest.coinapi.io/v1/exchangerate/ETH/USDT'
+
+UNISWAP_ADDRESS = '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640'
+

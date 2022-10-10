@@ -21,8 +21,7 @@ class CryptoService:
         return {
             'module': 'account',
             'action': 'tokentx',
-            'contractaddress': '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2',
-            'address': '0x4e83362442b8d1bec281594cea3050c8eb01311c',
+            'address': UNISWAP_ADDRESS,
             'page': page,
             'offset': offset,
             'startblock': start_block,
@@ -53,6 +52,8 @@ class CryptoService:
             params = CryptoService.get_ether_scan_params(
                 start_block, end_block, page_, offset_)
             response = requests.get(ETHER_SCAN_BASE_URL, params=params)
+            if response.status_code != HTTPStatus.OK:
+                raise response.raise_for_status()
 
             response_json = response.json()
             if response_json['message'] == 'No transactions found':
@@ -65,6 +66,8 @@ class CryptoService:
             for result in response_json['result']:
                 fee, status_code_ = self.calculate_tx_fee(result['gasPrice'], result['gasUsed'],
                                                           result['timeStamp'])
+                if status_code_ == HTTPStatus.TOO_MANY_REQUESTS:
+                    break
                 _fees.append(fee)
             return _fees, status_code_
 
