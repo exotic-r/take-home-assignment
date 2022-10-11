@@ -2,14 +2,15 @@ import json
 import logging
 
 from http import HTTPStatus
-from flask import Flask, request
-from flask_caching import Cache
+from flask import Flask, request, redirect, url_for, jsonify
 from requests import HTTPError
+from redis import Redis
+from web3.exceptions import TransactionNotFound
 
 from cryptoService import CryptoService
 from decimalEncoder import DecimalEncoder
 from exceptions import *
-from RedisClient import RedisClient
+from celery_app import get_historic_transaction
 
 config = {
     "DEBUG": True,
@@ -18,19 +19,16 @@ config = {
 }
 app = Flask(__name__)
 app.config.from_mapping(config)
-cache = Cache(app)
+redis = Redis(host='localhost', port=6379)
+
+global service
+service = CryptoService(redis)
 
 logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 
 
-@app.route('/')
-def index():
-    return 'Welcome to our flask app'
-
-
 @app.route("/transaction-fee/<tx_hash>", methods=['GET'])
-@cache.cached()
 def transaction_fee_by_tx_hash(tx_hash):
     try:
         fee = service.get_transaction_fee_by_tx_hash(tx_hash)
@@ -46,16 +44,15 @@ def transaction_fee_by_tx_hash(tx_hash):
             status=e.response.status_code,
             mimetype='application/json'
         )
-    except TransactionNotFoundException as e:
+    except (TransactionNotFound, TransactionNotUniswap) as e:
         return app.response_class(
-            response=json.dumps({'message': str(e)}),
+            response=json.dumps({'exception': str(e)}),
             status=HTTPStatus.BAD_REQUEST,
             mimetype='application/json'
         )
 
 
 @app.route("/transaction-fee", methods=['GET'])
-@cache.cached()
 def transaction_fee_by_time_range():
     args = request.args
     start_time = args.get('start_time')
@@ -93,12 +90,28 @@ def transaction_fee_by_time_range():
         )
 
 
-@app.before_request
-def init_http_client():
-    global service
-    redis = RedisClient()
-    service = CryptoService(redis)
+@app.route('/', methods=['GET'])
+def long_task():
+    task = get_historic_transaction.delay(service)
+    return redirect(url_for('taskstatus', task_id=task.id))
 
 
-# if __name__ == "__main__":
-#     app.run(port=8080)
+@app.route('/status/<task_id>')
+def taskstatus(task_id):
+    task = long_task.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        response = {
+            'queue_state': task.state,
+            'status': 'Pending...',
+            'status_update': url_for('taskstatus', task_id=task.id)
+        }
+    else:
+        response = {
+            'queue_state': task.state,
+            'result': task.wait()
+        }
+    return jsonify(response)
+
+
+if __name__ == "__main__":
+    app.run(port=8080)
