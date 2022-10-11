@@ -1,15 +1,14 @@
 # Take-home-assignment
 
-A simple RESTful service that interacts with the Ethereum network to get real time/historical 
+A RESTful service that interacts with the Ethereum network to get real time/historical 
 transaction fee in USBT for all the Uniswap WETH-USDC transactions.
 
-It is written in Python 3.9. Uses the Flask web framework to expose endpoints.\
-Provides `Dockerfile` and `docker-compose` files to run the app in container. \
-Redis is used for better performance getting ETH/USDT rate and block numbers from timestamp. 
+It is written in Python 3.9. Uses the Flask web framework to expose endpoints.
+Provides `Dockerfile` and `docker-compose` files to run the app in container.
+Redis is used to store transactions:fee mapping for future query. 
 
-## Limitation
-The app uses to public API to retrieve data to calculate the final transaction fee.\
-Which are Coin API and Ether Scan API with rate limit.\
+All together it uses Web3 library and Alchemy as its remote node provider, Crypto Compare API, and Ether Scan API to get the transaction fee.
+
 
 ## Getting Started
 
@@ -24,7 +23,7 @@ Docker: [How to install Docker](https://docs.docker.com/get-docker/)
 
 ```commandline
 git clone https://github.com/exotic-r/take-home-assignment.git
-
+cd take-home-assignment
 docker-compose build
 docker-compose up
 ```
@@ -49,7 +48,7 @@ Content-Length: 2
 ```
 
 ### GET transaction fee by time range
-`GET /transaction-fee/<start_time>/<end_time>`
+`GET /transaction-fee?start_time=<start_time>&end_time=<end_time>`
 
 REQUEST: 
 ```
@@ -84,3 +83,5 @@ Below are the list of things to explore for future development.
 - write more tests
 - complete readme
 - retry logic 
+- health check endpoint
+- dashboard to monitor background task status
