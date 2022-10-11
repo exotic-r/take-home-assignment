@@ -7,6 +7,9 @@ services:
       context: ./web/
     ports:
       - "8000:8000"
+    depends_on:
+      - redis
+
   redis:
     container_name: redis
     image: bitnami/redis:latest
@@ -14,11 +17,24 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - "6379:6379"
+
   nginx:
     container_name: nginx
     restart: always
     build: ./nginx/
     ports:
       - "80:80"
-    links:
+    depends_on:
+      - web
+
+  worker:
+    container_name: worker
+    build:
+      context: ./web/
+    command: -A celery_app.celery worker --loglevel=info
+    environment:
+      CELERY_BROKER_URL: redis://redis
+      CELERY_RESULT_BACKEND: redis://redis
+    depends_on:
+      - redis
       - web
