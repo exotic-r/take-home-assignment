@@ -7,50 +7,50 @@ from typing import Union
 import requests
 import logging
 
+from eth_typing import HexStr
 from web3 import Web3
 from config import *
 from exceptions import TransactionNotFoundException, TransactionNotFoundExceptionByTimeRange
+from utils import *
 
 
 class CryptoService:
-    def __init__(self, redis_client):
-        self.redis_client = redis_client
+    def __init__(self, redis):
+        self.redis = redis
+        self.w3 = self.__connect_alchemy()
 
-    @staticmethod
-    def get_ether_scan_params(start_block, end_block, page, offset=10) -> dict:
-        return {
-            'module': 'account',
-            'action': 'tokentx',
-            'address': UNISWAP_ADDRESS,
-            'page': page,
-            'offset': offset,
-            'startblock': start_block,
-            'endblock': end_block,
-            'sort': 'asc',
-            'apikey': ETHER_SCAN_API_KEY,
-        }
+    def __connect_alchemy(self):
+        w3 = Web3(Web3.HTTPProvider(ALCHEMY_URL))
 
-    def get_transaction_fee_by_tx_hash(self, tx_hash: str) -> Union[int, Decimal]:
-        response = requests.get(ETHER_SCAN_BASE_URL, params={})
-        if response.status_code != HTTPStatus.OK:
-            raise response.raise_for_status()
+        if w3.isConnected():
+            logging.info("Successfully connected to Alchemy")
+        else:
+            raise RuntimeError("Error while connecting to Alchemy")
 
-        response_json = response.json()
-        if response_json['message'] == 'No transactions found':
-            raise TransactionNotFoundException(tx_hash)
+        return w3
 
-        result = response_json['result'][0]
-        fee, _ = self.calculate_tx_fee(
-            result['gasPrice'], result['gasUsed'], result['timeStamp'])
+    def get_transaction_fee_by_tx_hash(self, tx_hash: HexStr) -> Decimal:
+        """
+        Get transactions fee for a single tx hash
+        If the fee is not stored in redis, query ether scan to get the fee
+        """
+        cached_data = self.redis.get(tx_hash)
+        if cached_data:
+            return Decimal(cached_data.decode('utf-8').strip('"'))
+
+        transaction = self.w3.eth.get_transaction(tx_hash)
+        receipt = self.w3.eth.get_transaction_receipt(tx_hash)
+        timestamp = self.w3.eth.getBlock(transaction['blockNumber']).timestamp
+
+        fee, _ = self.calculate_tx_fee(transaction['gasPrice'], receipt['gasUsed'], timestamp)
+        self.redis.set(tx_hash, json.dumps(str(fee)))
         return fee
 
-    def get_transactions_fee_by_time_range(self, start_time: int, end_time: int):
-        start_block, end_block = self.get_block_number(
-            start_time), self.get_block_number(end_time)
+    def get_transactions_fee_by_time_range(self, start_time: int, end_time: int) -> Decimal:
+        start_block, end_block = self.get_block_number(start_time), self.get_block_number(end_time)
 
         def request_fees(page_: int, offset_: int):
-            params = CryptoService.get_ether_scan_params(
-                start_block, end_block, page_, offset_)
+            params = get_ether_scan_params(start_block, end_block, page_, offset_)
             response = requests.get(ETHER_SCAN_BASE_URL, params=params)
             if response.status_code != HTTPStatus.OK:
                 raise response.raise_for_status()
@@ -64,11 +64,17 @@ class CryptoService:
             status_code_ = None
 
             for result in response_json['result']:
-                fee, status_code_ = self.calculate_tx_fee(result['gasPrice'], result['gasUsed'],
-                                                          result['timeStamp'])
-                if status_code_ == HTTPStatus.TOO_MANY_REQUESTS:
-                    break
-                _fees.append(fee)
+                tx_hash = result['hash']
+                cached_data = self.redis.get(tx_hash)
+                if cached_data:
+                    _fees.append(Decimal(cached_data.decode('utf-8').strip('"')))
+                else:
+                    fee, status_code_ = self.calculate_tx_fee(result['gasPrice'], result['gasUsed'],
+                                                              result['timeStamp'])
+                    if status_code_ in (550, HTTPStatus.TOO_MANY_REQUESTS):
+                        break
+                    _fees.append(fee)
+                    self.redis.set(tx_hash, json.dumps(str(fee)))
             return _fees, status_code_
 
         # number of transactions to retrieve for each http call to ether scan
@@ -87,7 +93,7 @@ class CryptoService:
         return fees
 
     def get_block_number(self, time_stamp: int) -> int:
-        cached_data = self.redis_client.redis.get(time_stamp)
+        cached_data = self.redis.get(time_stamp)
         if cached_data:
             return cached_data.decode('utf-8')
 
@@ -104,7 +110,7 @@ class CryptoService:
 
         response_json = response.json()
         block_number = response_json['result']
-        self.redis_client.redis.set(time_stamp, json.dumps(block_number))
+        self.redis.set(time_stamp, json.dumps(block_number))
 
         return block_number
 
@@ -126,9 +132,14 @@ class CryptoService:
         return tx_cost_usdt, status_code
 
     def __get_fx_rate(self, date_time) -> tuple[Decimal, int]:
+        """
+        Use coin API to get  the fx rate of ETH/USDT at date_time
+        :param date_time:
+        :return:
+        """
         # return Decimal(1300)
         status_code = HTTPStatus.OK
-        cached_data = self.redis_client.redis.get(date_time)
+        cached_data = self.redis.get(date_time)
 
         if cached_data:
             return Decimal(cached_data.decode('utf-8').strip('"')), status_code
@@ -151,7 +162,7 @@ class CryptoService:
         response_json = response.json()
 
         fx_rate = Decimal(response_json['rate'])
-        self.redis_client.redis.set(date_time, json.dumps(str(fx_rate)))
+        self.redis.set(date_time, json.dumps(str(fx_rate)))
 
         return fx_rate, status_code
 
