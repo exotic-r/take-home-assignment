@@ -13,3 +13,11 @@ class TransactionNotFoundExceptionByTimeRange(Exception):
 
     def __str__(self):
         return f'No transaction found between {self.start_time} and {self.end_time}'
+
+
+class TransactionNotUniswap(Exception):
+    def __init__(self, tx_hash):
+        self.tx_hash = tx_hash
+
+    def __str__(self):
+        return f'Transaction with hash: {self.tx_hash} is not Uniswap ETH/USDC transaction'

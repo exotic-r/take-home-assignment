@@ -2,15 +2,13 @@ import json
 from datetime import datetime
 from decimal import Decimal
 from http import HTTPStatus
-from typing import Union
 
 import requests
 import logging
 
 from eth_typing import HexStr
 from web3 import Web3
-from config import *
-from exceptions import TransactionNotFoundException, TransactionNotFoundExceptionByTimeRange
+from exceptions import *
 from utils import *
 
 
@@ -39,6 +37,12 @@ class CryptoService:
             return Decimal(cached_data.decode('utf-8').strip('"'))
 
         transaction = self.w3.eth.get_transaction(tx_hash)
+
+        # verify it is Uniswap transaction
+        to_, from_ = transaction['to'], transaction['from']
+        if UNISWAP_ADDRESS not in (to_, from_):
+            raise TransactionNotUniswap(tx_hash)
+
         receipt = self.w3.eth.get_transaction_receipt(tx_hash)
         timestamp = self.w3.eth.getBlock(transaction['blockNumber']).timestamp
 
@@ -56,12 +60,12 @@ class CryptoService:
                 raise response.raise_for_status()
 
             response_json = response.json()
-            if response_json['message'] == 'No transactions found':
+            if response_json['message'] == 'No transactions found' or not response_json.get('result'):
                 raise TransactionNotFoundExceptionByTimeRange(
                     start_time, end_time)
 
             _fees = []
-            status_code_ = None
+            status_code_ = HTTPStatus.OK
 
             for result in response_json['result']:
                 tx_hash = result['hash']
