@@ -2,7 +2,7 @@ import json
 import logging
 
 from http import HTTPStatus
-from flask import Flask, request, redirect, url_for, jsonify
+from flask import Flask, request, url_for, jsonify
 from requests import HTTPError
 from redis import Redis
 from web3.exceptions import TransactionNotFound
@@ -19,7 +19,7 @@ config = {
 }
 app = Flask(__name__)
 app.config.from_mapping(config)
-redis = Redis(host='localhost', port=6379)
+redis = Redis(host='redis', port=6379)
 
 global service
 service = CryptoService(redis)
@@ -90,27 +90,24 @@ def transaction_fee_by_time_range():
         )
 
 
-@app.route('/', methods=['GET'])
-def long_task():
-    task = get_historic_transaction.delay(service)
-    return redirect(url_for('taskstatus', task_id=task.id))
+@app.route('/', methods=['POST'])
+def task_get_historic_transaction():
+    task = get_historic_transaction.delay()
+    return app.response_class(
+        response=json.dumps({'task_id': task.id}),
+        status=HTTPStatus.OK,
+        mimetype='application/json'
+    )
 
 
 @app.route('/status/<task_id>')
-def taskstatus(task_id):
-    task = long_task.AsyncResult(task_id)
-    if task.state == 'PENDING':
-        response = {
-            'queue_state': task.state,
-            'status': 'Pending...',
-            'status_update': url_for('taskstatus', task_id=task.id)
-        }
-    else:
-        response = {
-            'queue_state': task.state,
-            'result': task.wait()
-        }
-    return jsonify(response)
+def task_status(task_id):
+    task = get_historic_transaction.AsyncResult(task_id)
+    return app.response_class(
+        response=json.dumps({'queue_state': task.state}),
+        status=HTTPStatus.OK,
+        mimetype='application/json'
+    )
 
 
 if __name__ == "__main__":

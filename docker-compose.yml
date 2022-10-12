@@ -31,10 +31,9 @@ services:
     container_name: worker
     build:
       context: ./web/
+    entrypoint: celery
     command: -A celery_app.celery worker --loglevel=info
-    environment:
-      CELERY_BROKER_URL: redis://redis
-      CELERY_RESULT_BACKEND: redis://redis
+    links:
+      - redis
     depends_on:
       - redis
-      - web
