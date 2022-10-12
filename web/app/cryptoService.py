@@ -2,7 +2,6 @@ import json
 import logging
 from decimal import Decimal
 from http import HTTPStatus
-from typing import Union, Any
 
 import requests
 from eth_typing import HexStr
@@ -17,7 +16,8 @@ class CryptoService:
         self.redis = redis
         self.w3 = self.__connect_alchemy()
 
-    def __connect_alchemy(self):
+    @staticmethod
+    def __connect_alchemy():
         w3 = Web3(Web3.HTTPProvider(ALCHEMY_URL))
 
         if w3.isConnected():
@@ -50,7 +50,8 @@ class CryptoService:
         self.redis.set(tx_hash, json.dumps(str(fee)))
         return fee
 
-    def get_transactions_fee_by_time_range(self, start_time: int, end_time: int) -> list[Union[Decimal, Any]]:
+    def get_transactions_fee_by_time_range(self, start_time: int, end_time: int) -> tuple[list[Decimal], int]:
+
         start_block, end_block = self.get_block_number(start_time), self.get_block_number(end_time)
 
         def request_fees(page_: int):
@@ -80,8 +81,8 @@ class CryptoService:
                     chuck.append(fee)
                     self.redis.set(tx_hash, json.dumps(str(fee)))
 
-            last_processed_time = response_json['result'][-1]['timeStamp']
-            return chuck, status_code_, last_processed_time
+            last_processed_timestamp = response_json['result'][-1]['timeStamp']
+            return chuck, status_code_, last_processed_timestamp
 
         page = 1
         last_processed_time = 0
