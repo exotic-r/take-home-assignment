@@ -2,7 +2,7 @@ import json
 import logging
 
 from http import HTTPStatus
-from flask import Flask, request, url_for, jsonify
+from flask import Flask, request
 from requests import HTTPError
 from redis import Redis
 from web3.exceptions import TransactionNotFound
@@ -20,8 +20,6 @@ config = {
 app = Flask(__name__)
 app.config.from_mapping(config)
 redis = Redis(host='redis', port=6379)
-
-global service
 service = CryptoService(redis)
 
 logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',
