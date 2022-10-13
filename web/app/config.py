@@ -15,3 +15,6 @@ CRYPTO_COMPARE_URL = 'https://min-api.cryptocompare.com/data/v2/histominute'
 # for the purpose of this exercise, we will keep it small
 ETHER_SCAN_OFFSET = 1000
 MAX_FEES_PER_REQUEST = 1000
+
+START_BLOCK = 0
+END_BLOCK = 999999999

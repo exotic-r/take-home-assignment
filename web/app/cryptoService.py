@@ -15,6 +15,7 @@ class CryptoService:
     def __init__(self, redis):
         self.redis = redis
         self.w3 = self.__connect_alchemy()
+        self.last_processed_block = START_BLOCK
 
     @staticmethod
     def __connect_alchemy():
@@ -46,13 +47,13 @@ class CryptoService:
         receipt = self.w3.eth.get_transaction_receipt(tx_hash)
         timestamp = self.w3.eth.getBlock(transaction['blockNumber']).timestamp
 
-        fee, _ = self.calculate_tx_fee(transaction['gasPrice'], receipt['gasUsed'], timestamp)
+        fee, _ = self.__calculate_tx_fee(transaction['gasPrice'], receipt['gasUsed'], timestamp)
         self.redis.set(tx_hash, json.dumps(str(fee)))
         return fee
 
     def get_transactions_fee_by_time_range(self, start_time: int, end_time: int) -> tuple[list[Decimal], int]:
 
-        start_block, end_block = self.get_block_number(start_time), self.get_block_number(end_time)
+        start_block, end_block = self.__get_block_number(start_time), self.__get_block_number(end_time)
 
         def request_fees(page_: int):
             params = get_ether_scan_params(start_block, end_block, page_, ETHER_SCAN_OFFSET)
@@ -74,8 +75,8 @@ class CryptoService:
                 if cached_data is not None:
                     chuck.append(Decimal(cached_data.decode('utf-8').strip('"')))
                 else:
-                    fee, status_code_ = self.calculate_tx_fee(result['gasPrice'], result['gasUsed'],
-                                                              result['timeStamp'])
+                    fee, status_code_ = self.__calculate_tx_fee(result['gasPrice'], result['gasUsed'],
+                                                                result['timeStamp'])
                     if status_code_ in (550, HTTPStatus.TOO_MANY_REQUESTS):
                         break
                     chuck.append(fee)
@@ -104,7 +105,35 @@ class CryptoService:
 
         return fees, last_processed_time
 
-    def get_block_number(self, time_stamp: int) -> int:
+    def get_historic_fees(self):
+        page = 0
+
+        while True:
+            params = get_ether_scan_params(self.last_processed_block, END_BLOCK, page, ETHER_SCAN_OFFSET)
+            response = requests.get(ETHER_SCAN_BASE_URL, params=params)
+            if response.status_code != HTTPStatus.OK:
+                raise response.raise_for_status()
+
+            response_json = response.json()
+            result = response_json['result']
+
+            if not result:
+                logging.info("Finished processing all historic transactions")
+                break
+
+            for result in response_json['result']:
+                tx_hash = result['hash']
+                cached_data = self.redis.get(tx_hash)
+                if cached_data is None:
+                    fee, status_code_ = self.__calculate_tx_fee(result['gasPrice'], result['gasUsed'],
+                                                                result['timeStamp'])
+                    if status_code_ in (550, HTTPStatus.TOO_MANY_REQUESTS):
+                        break
+                    self.redis.set(tx_hash, json.dumps(str(fee)))
+                self.last_processed_block = result['blockNumber']
+
+
+    def __get_block_number(self, time_stamp: int) -> int:
         cached_data = self.redis.get(time_stamp)
         if cached_data is not None:
             return cached_data.decode('utf-8')
@@ -126,7 +155,7 @@ class CryptoService:
 
         return block_number
 
-    def calculate_tx_fee(self, gasPrice, gasUsed, time_stamp):
+    def __calculate_tx_fee(self, gasPrice, gasUsed, time_stamp):
         tx_cost_wei = int(float(gasPrice) * float(gasUsed))
         tx_cost_eth = Web3.fromWei(tx_cost_wei, "ether")
 
