@@ -2,9 +2,11 @@ import json
 import logging
 from decimal import Decimal
 from http import HTTPStatus
+from typing import Union, Any
 
 import requests
 from eth_typing import HexStr
+from redis.client import Redis
 from web3 import Web3
 
 from exceptions import *
@@ -12,13 +14,17 @@ from utils import *
 
 
 class CryptoService:
-    def __init__(self, redis):
+    def __init__(self, redis: Redis):
         self.redis = redis
         self.w3 = self.__connect_alchemy()
         self.last_processed_block = START_BLOCK
 
     @staticmethod
-    def __connect_alchemy():
+    def __connect_alchemy() -> Web3:
+        """
+        connect to web3 http provider
+        :return: Web3 instance
+        """
         w3 = Web3(Web3.HTTPProvider(ALCHEMY_URL))
 
         if w3.isConnected():
@@ -32,6 +38,7 @@ class CryptoService:
         """
         Get transactions fee for a single tx hash
         If the fee is not stored in redis, query ether scan to get the fee
+        :return: fee
         """
         cached_data = self.redis.get(tx_hash)
         if cached_data is not None:
@@ -53,7 +60,12 @@ class CryptoService:
         return fee
 
     def get_transactions_fee_by_time_range(self, start_time: int, end_time: int) -> tuple[list[Decimal], int]:
-
+        """
+        Get a list of transaction fees between 2 time range
+        :param start_time:
+        :param end_time:
+        :return: fees
+        """
         start_block, end_block = self.__get_block_number(
             start_time), self.__get_block_number(end_time)
 
@@ -106,11 +118,15 @@ class CryptoService:
 
             page += 1
 
-        # TODO: handle letting requestor know up to what timstamp have been processed
-
+        # TODO: since there is a max_cap on the number of transactions to return in a single api call
+        # could we useful to use <last_processed_time> inform the caller the last processed time
         return fees, last_processed_time
 
     def get_historic_fees(self):
+        """
+        Background task to get all the historical fees
+        :return: None
+        """
         page = 0
 
         while True:
@@ -138,15 +154,17 @@ class CryptoService:
                     self.redis.set(tx_hash, json.dumps(str(fee)))
                 self.last_processed_block = result['blockNumber']
 
-    def __get_block_number(self, time_stamp: int) -> int:
-        cached_data = self.redis.get(time_stamp)
-        if cached_data is not None:
-            return cached_data.decode('utf-8')
-
+    @staticmethod
+    def __get_block_number(timestamp: int) -> Union[str, Any]:
+        """
+        Get eth block number by timestamp
+        :param timestamp:
+        :return: block number
+        """
         params = {
             'module': 'block',
             'action': 'getblocknobytime',
-            'timestamp': time_stamp,
+            'timestamp': timestamp,
             'closest': 'before',
             'apikey': ETHER_SCAN_API_KEY,
         }
@@ -156,41 +174,44 @@ class CryptoService:
 
         response_json = response.json()
         block_number = response_json['result']
-        self.redis.set(time_stamp, json.dumps(block_number))
 
         return block_number
 
-    def __calculate_tx_fee(self, gasPrice, gasUsed, time_stamp):
+    def __calculate_tx_fee(self, gasPrice, gasUsed, timestamp):
+        """
+        Use Web3 library to get exchange rate by timestamp
+        :param gasPrice:
+        :param gasUsed:
+        :param timestamp:
+        :returns: fee in USDC, status code
+        """
         tx_cost_wei = int(float(gasPrice) * float(gasUsed))
         tx_cost_eth = Web3.fromWei(tx_cost_wei, "ether")
 
-        rate, status_code = self.__get_fx_rate(time_stamp)
+        rate, status_code = self.__get_fx_rate(timestamp)
 
         if not rate:
             return 0, status_code
 
         tx_cost_usdt = rate * tx_cost_eth
 
-        logging.info(f"timestamp: {time_stamp}, tx cost - USDT: {tx_cost_usdt:.2f}, wei: {tx_cost_wei:.0f},"
+        logging.info(f"timestamp: {timestamp}, tx cost - USDT: {tx_cost_usdt:.2f}, wei: {tx_cost_wei:.0f},"
                      f" eth: {tx_cost_eth:.5f}, fx rate: {rate:.2f}")
 
         return tx_cost_usdt, status_code
 
-    def __get_fx_rate(self, timestamp) -> tuple[Decimal, int]:
+    @staticmethod
+    def __get_fx_rate(timestamp) -> tuple[Decimal, int]:
         """
         Use coin API to get  the fx rate of ETH/USDT at date_time
         :param timestamp:
-        :return:
+        :return: exchange rate, status code
         """
         status_code = HTTPStatus.OK
 
-        cached_data = self.redis.get(timestamp)
-        if cached_data is not None:
-            return Decimal(cached_data.decode('utf-8').strip('"')), status_code
-
         headers = {'Apikey': CRYPTO_COMPARE_API_KEY}
         params = {'fsym': 'ETH', 'tsym': 'USDC',
-                  'limit': 1, 'toTs': 1665503460}
+                  'limit': 1, 'toTs': timestamp}
         response = requests.get(
             CRYPTO_COMPARE_URL, params=params, headers=headers)
 
@@ -207,11 +228,13 @@ class CryptoService:
 
         response_json = response.json()
         if response_json.get('Response') != 'Success':
-            logging.error(
-                "Failed to retrieve ETH/USDC exchange rate, defaulting to 0")
+            logging.error("Failed to get ETH/USDC exchange rate, defaulting to 0")
             return Decimal(0), 500
 
-        fx_rate = Decimal(response_json['Data']['Data'][0]['open'])
-        self.redis.set(timestamp, json.dumps(str(fx_rate)))
+        try:
+            fx_rate = Decimal(response_json['Data']['Data'][0]['open'])
+        except RuntimeError as e:
+            logging.error(f"Failed to get ETH/USDC exchange rate, defaulting to 0 error_msg: {e}")
+            return Decimal(0), 500
 
         return fx_rate, status_code

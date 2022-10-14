@@ -12,27 +12,21 @@ from decimalEncoder import DecimalEncoder
 from exceptions import *
 from celery_app import get_historic_transaction
 
-config = {
-    "DEBUG": True,
-    "CACHE_TYPE": "SimpleCache",
-    "CACHE_DEFAULT_TIMEOUT": 300
-}
 app = Flask(__name__)
-app.config.from_mapping(config)
-redis = Redis(host='redis', port=6379)
+redis = Redis(host='redis')
 service = CryptoService(redis)
 
 logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 
 
-@app.route("/transaction-fee/<tx_hash>", methods=['GET'])
+@app.route("/v1/transaction-fee/<tx_hash>", methods=['GET'])
 def transaction_fee_by_tx_hash(tx_hash):
     try:
         fee = service.get_transaction_fee_by_tx_hash(tx_hash)
 
         return app.response_class(
-            response=json.dumps({'transaction fee': fee}, cls=DecimalEncoder),
+            response=json.dumps({'fee': fee}, cls=DecimalEncoder),
             status=HTTPStatus.OK,
             mimetype='application/json'
         )
@@ -50,7 +44,7 @@ def transaction_fee_by_tx_hash(tx_hash):
         )
 
 
-@app.route("/transaction-fee", methods=['GET'])
+@app.route("/v1/transaction-fee", methods=['GET'])
 def transaction_fee_by_time_range():
     args = request.args
     start_time = args.get('start_time')
@@ -65,11 +59,11 @@ def transaction_fee_by_time_range():
         )
 
     try:
-        fees = service.get_transactions_fee_by_time_range(
+        result = service.get_transactions_fee_by_time_range(
             int(start_time), int(end_time))
 
         return app.response_class(
-            response=json.dumps({'transaction fees': fees},
+            response=json.dumps({'fees': result[0]},
                                 cls=DecimalEncoder),
             status=HTTPStatus.OK,
             mimetype='application/json'
@@ -88,7 +82,7 @@ def transaction_fee_by_time_range():
         )
 
 
-@app.route('/', methods=['POST'])
+@app.route('/v1/', methods=['POST'])
 def task_get_historic_transaction():
     task = get_historic_transaction.delay()
     return app.response_class(
@@ -98,7 +92,7 @@ def task_get_historic_transaction():
     )
 
 
-@app.route('/status/<task_id>')
+@app.route('/v1/status/<task_id>')
 def task_status(task_id):
     task = get_historic_transaction.AsyncResult(task_id)
     return app.response_class(
