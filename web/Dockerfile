@@ -10,4 +10,4 @@ RUN pip3 install -r requirements.txt && pip3 install gunicorn
 
 ENV PYTHONPATH=/app
 
-ENTRYPOINT ["/runserver.sh"]
+ENTRYPOINT ["gunicorn", "--log-level", "info", "--workers", "4", "-b", "0.0.0.0:8000", "app.app:app"]
