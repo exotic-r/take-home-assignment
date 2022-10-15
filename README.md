@@ -45,11 +45,11 @@ docker-compose up
 ## REST API
 
 ### GET transaction fee by transaction hash
-`GET /transaction-fee/<tx_hash>`
+`GET /v1/fee/<tx_hash>`
 
 REQUEST: 
 ```commandline
-curl -i -H 'Accept: application/json' http://localhost:8000/<tx_hash>
+curl -i -H 'Accept: application/json' http://localhost:8000/v1/fee/0x125e0b641d4a4b08806bf52c0c6757648c9963bcda8681e4f996f09e00d4c2cc
 ```
 RESPONSE: 
 ```
@@ -62,11 +62,11 @@ Content-Length: 2
 ```
 
 ### GET transaction fee by time range
-`GET /transaction-fee?start_time=<start_time>&end_time=<end_time>`
+`GET /v1/fee?start_time=<start_time>&end_time=<end_time>`
 
 REQUEST: 
 ```commandline
-curl -i -H 'Accept: application/json' http://localhost:8000/?start_time=1644760315&end_time=1663652062>
+curl -i -H 'Accept: application/json' http://localhost:8000/v1/fee?start_time=1644760315&end_time=1663652062
 ```
 RESPONSE: 
 ```
@@ -79,11 +79,11 @@ Content-Length: 2
 ```
 
 ### POST trigger background task to get historical transaction fee
-`POST /`
+`POST /v1/`
 
 REQUEST: 
 ```commandline
-curl -i -H 'Accept: application/json' http://localhost:8000/
+curl -i -H 'Accept: application/json' http://localhost:8000/v1/
 ```
 RESPONSE:
 ```
