@@ -68,6 +68,7 @@ class CryptoService:
         """
         start_block, end_block = self.__get_block_number(
             start_time), self.__get_block_number(end_time)
+        seen_transactions = set()
 
         def request_fees(page_: int):
             params = get_ether_scan_params(
@@ -86,6 +87,10 @@ class CryptoService:
 
             for result in response_json['result']:
                 tx_hash = result['hash']
+                if tx_hash in seen_transactions:
+                    continue
+
+                seen_transactions.add(tx_hash)
                 cached_data = self.redis.get(tx_hash)
                 if cached_data is not None:
                     chuck.append(
