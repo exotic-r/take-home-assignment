@@ -1,6 +1,7 @@
 FROM python:3.9.14-slim-buster
 
-COPY . /
+COPY . /app
+WORKDIR /app
 
 RUN apt-get update && \
     apt-get -y install gcc mono-mcs && \
@@ -8,6 +9,4 @@ RUN apt-get update && \
 
 RUN pip3 install -r requirements.txt && pip3 install gunicorn
 
-ENV PYTHONPATH=/app
-
-ENTRYPOINT ["gunicorn", "--log-level", "info", "--workers", "4", "-b", "0.0.0.0:8000", "app.app:app"]
+ENTRYPOINT ["gunicorn", "--log-level", "info", "--workers", "4", "-b", "0.0.0.0:8000", "app:app"]
