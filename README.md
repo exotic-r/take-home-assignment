@@ -54,11 +54,13 @@ curl -i -H 'Accept: application/json' http://localhost:8000/v1/fee/0x125e0b641d4
 RESPONSE: 
 ```
 HTTP/1.1 200 OK
-Date: Thu, 24 Feb 2011 12:36:30 GMT
-Status: 200 OK
+Server: gunicorn
+Date: Sat, 15 Oct 2022 16:26:42 GMT
+Connection: close
 Content-Type: application/json
-Content-Length: 2
-[]
+Content-Length: 22
+
+{"fee": 430.926001440}
 ```
 
 ### GET transaction fee by time range
@@ -66,16 +68,19 @@ Content-Length: 2
 
 REQUEST: 
 ```commandline
-curl -i -H 'Accept: application/json' http://localhost:8000/v1/fee?start_time=1644760315&end_time=1663652062
+curl -i -H 'Accept: application/json' 'http://localhost:8000/v1/fee?start_time=1620299304&end_time=1620300304'
 ```
+
 RESPONSE: 
 ```
 HTTP/1.1 200 OK
-Date: Thu, 24 Feb 2011 12:36:30 GMT
-Status: 200 OK
+Server: gunicorn
+Date: Sat, 15 Oct 2022 16:45:26 GMT
+Connection: close
 Content-Type: application/json
-Content-Length: 2
-[]
+Content-Length: 179
+
+{"fees": [11.6024442765, 13.6966190625, 12.5061204870, 16.524370170, 13.8207318390, 19.26177065362529175, 12.6791433570, 8.8548343695, 11.141295480, 11.7389738970, 12.3384697920]}
 ```
 
 ### POST trigger background task to get historical transaction fee
@@ -83,16 +88,18 @@ Content-Length: 2
 
 REQUEST: 
 ```commandline
-curl -i -H 'Accept: application/json' http://localhost:8000/v1/
+curl -i -X POST http://localhost:8000/v1/
 ```
 RESPONSE:
 ```
 HTTP/1.1 200 OK
-Date: Thu, 24 Feb 2011 12:36:30 GMT
-Status: 200 OK
+Server: gunicorn
+Date: Sat, 15 Oct 2022 16:48:04 GMT
+Connection: close
 Content-Type: application/json
-Content-Length: 2
-[]
+Content-Length: 51
+
+{"task_id": "9daf389e-bbab-4c5f-9ffa-396574aa069e"}
 ```
 
 ## TODO
