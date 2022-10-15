@@ -52,7 +52,7 @@ class CryptoService:
             raise TransactionNotUniswap(tx_hash)
 
         receipt = self.w3.eth.get_transaction_receipt(tx_hash)
-        timestamp = self.w3.eth.getBlock(transaction['blockNumber']).timestamp
+        timestamp = self.w3.eth.get_block(transaction['blockNumber']).timestamp
 
         fee, _ = self.__calculate_tx_fee(
             transaction['gasPrice'], receipt['gasUsed'], timestamp)
@@ -214,30 +214,35 @@ class CryptoService:
         """
         status_code = HTTPStatus.OK
 
-        headers = {'Apikey': CRYPTO_COMPARE_API_KEY}
         params = {'fsym': 'ETH', 'tsym': 'USDC',
-                  'limit': 1, 'toTs': timestamp}
+                  'limit': 1, 'toTs': timestamp, 'api_key': CRYPTO_COMPARE_API_KEY}
         response = requests.get(
-            CRYPTO_COMPARE_URL, params=params, headers=headers)
+            CRYPTO_COMPARE_HISTORY_HOUR_URL, params=params)
 
         if response.status_code != HTTPStatus.OK:
             if response.status_code == 550:
                 logging.error(
                     f"Error retrieving fx rate for timestamp: {timestamp}, returning fx rate 0")
                 return Decimal(0), 550
-            if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
-                logging.error(f"Error retrieving fx rate for date time: {timestamp} due to too many requests, "
-                              f"returning fx rate 0")
-                return Decimal(0), HTTPStatus.TOO_MANY_REQUESTS
-            raise response.raise_for_status()
+            return Decimal(0), 500
 
         response_json = response.json()
+        if response_json.get('Response') == 'Error':
+            # Crypto Compare returns 200 but the response is actually an 'error'
+            # due to too many requests (429)
+            if response_json.get('Message') == 'You are over your rate limit please upgrade your account!':
+                logging.error(f"Error retrieving fx rate for date time: {timestamp} due to too many requests, "
+                              f"returning fx rate 0")
+                status_code = HTTPStatus.TOO_MANY_REQUESTS
+            return Decimal(0), status_code
+
         if response_json.get('Response') != 'Success':
             logging.error("Failed to get ETH/USDC exchange rate, defaulting to 0")
             return Decimal(0), 500
 
         try:
-            fx_rate = Decimal(response_json['Data']['Data'][0]['open'])
+            # TODO: do better finding the closest price by timestamp
+            fx_rate = Decimal(response_json['Data']['Data'][1]['open'])
         except RuntimeError as e:
             logging.error(f"Failed to get ETH/USDC exchange rate, defaulting to 0 error_msg: {e}")
             return Decimal(0), 500

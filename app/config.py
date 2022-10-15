@@ -9,7 +9,7 @@ ALCHEMY_API_KEY = 'mtJHDGtUsG0aSjsipsOWwxAbZjxlR2a-'
 ALCHEMY_URL = f'https://eth-mainnet.g.alchemy.com/v2/{ALCHEMY_API_KEY}'
 
 CRYPTO_COMPARE_API_KEY = '316f410cf90a7fd9b4dcc41f8256338516b6675ff04bc829ab3eaae5c8c4e403'
-CRYPTO_COMPARE_URL = 'https://min-api.cryptocompare.com/data/v2/histominute'
+CRYPTO_COMPARE_HISTORY_HOUR_URL = 'https://min-api.cryptocompare.com/data/v2/histohour'
 
 # number of transactions to retrieve for each http call to ether scan
 # for the purpose of this exercise, we will keep it small

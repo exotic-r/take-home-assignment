@@ -13,16 +13,17 @@ Redis is used to store transactions:fee mapping for future query.
 All together it uses Web3 library and Alchemy as its remote node provider, Crypto Compare API, and Ether Scan API 
 to get the transaction fee.
 
-Since Binance was banned in Singapore, I had to look for an alternative API that exposes ETH/USDC exchange fee.
-[Crypto Compare API](https://min-api.cryptocompare.com/documentation?key=Historical&cat=dataHistominute)
- was used for this purpose
-
+Since Binance API was banned in Singapore, I had to look for an alternative API that exposes ETH/USDC exchange fee.
+[Crypto Compare API](https://min-api.cryptocompare.com/documentation?key=Historical&cat=dataHistohour)
+ was used for this purpose. 
+One thing to note is that the Crypto Compare does not expose exchange rate older than 7 days on a lower timeframe.
+Because of this, hourly price will be used.
 
 ## Getting Started
 
 ### GET API KEY
-Free versions of the API KEY can be found in `web/app/config.py`.\
-For better accessibility and performance replace it with your own with less limitation.
+Free versions of the API KEY can be found in `app/config.py`.\
+For better availability replace it with your own with less limitation.
 
 ### Install
 Docker: [How to install Docker](https://docs.docker.com/get-docker/)
@@ -103,7 +104,7 @@ Content-Length: 51
 ```
 
 ## TODO
-Due to the time constraints, a lot of shortcuts were make.\
+Due to the time constraints, a lot of shortcuts were make.'
 Below are the list of things to explore for future development.
 
 - write more tests
