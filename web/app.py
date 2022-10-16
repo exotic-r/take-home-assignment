@@ -35,7 +35,7 @@ def transaction_fee_by_tx_hash(tx_hash):
             status=e.response.status_code,
             mimetype='application/json'
         )
-    except (TransactionNotFound, TransactionNotUniswap) as e:
+    except TransactionNotFound as e:
         return app.response_class(
             response=json.dumps({'message': str(e)}),
             status=HTTPStatus.BAD_REQUEST,

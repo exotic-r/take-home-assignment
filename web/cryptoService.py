@@ -46,13 +46,8 @@ class CryptoService:
 
         transaction = self.w3.eth.get_transaction(tx_hash)
 
-        # verify it is Uniswap transaction
-        to_, from_ = transaction['to'], transaction['from']
-        if UNISWAP_ADDRESS not in (to_, from_):
-            raise TransactionNotUniswap(tx_hash)
-
         receipt = self.w3.eth.get_transaction_receipt(tx_hash)
-        timestamp = self.w3.eth.get_block(transaction['blockNumber']).timestamp
+        timestamp = self.w3.eth.get_block(transaction['blockNumber']).get('timestamp')
 
         fee, _ = self.__calculate_tx_fee(
             transaction['gasPrice'], receipt['gasUsed'], timestamp)
