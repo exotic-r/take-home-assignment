@@ -1,7 +1,8 @@
 FROM python:3.9.14-slim-buster
 
-COPY . /app
-WORKDIR /app
+COPY . /
+ENV PYTHONPATH=/app
+
 
 RUN apt-get update && \
     apt-get -y install gcc mono-mcs && \

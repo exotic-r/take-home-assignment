@@ -7,9 +7,9 @@ from requests import HTTPError
 from redis import Redis
 from web3.exceptions import TransactionNotFound
 
-from cryptoService import CryptoService
-from exceptions import *
-from celery_app import get_historic_transaction
+from web.cryptoService import CryptoService
+from web.exceptions import *
+from web.celery_app import get_historic_transaction
 
 app = Flask(__name__)
 redis = Redis(host='redis')

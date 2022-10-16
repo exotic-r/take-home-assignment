@@ -2,12 +2,12 @@ version: "3"
 
 services:
   web:
-    container_name: app
+    container_name: web
     build:
-      context: ./app
+      context: web
     ports:
       - "8000:8000"
-    volumes: ['./app:/app']
+    volumes: ['./web:/web']
     depends_on:
       - redis
 
@@ -31,7 +31,7 @@ services:
   worker:
     container_name: worker
     build:
-      context: ./app
+      context: web
     entrypoint: celery
     command: -A celery_app.celery worker --loglevel=info
     links:
