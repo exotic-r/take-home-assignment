@@ -119,7 +119,7 @@ class CryptoService:
                 break
             if status_code == HTTPStatus.TOO_MANY_REQUESTS:
                 break
-            if len(fees) % ETHER_SCAN_OFFSET == 0:
+            if not len(fees) or not fees_chuck:
                 break
 
             page += 1
