@@ -9,9 +9,10 @@ transaction fee in USBC for all the Uniswap WETH-USDC transactions.
 It is written in Python 3.9. Uses the Flask web framework to expose endpoints.
 Provides `Dockerfile` and `docker-compose` files to run the app in container.
 Redis is used to store transactions:fee mapping for future query. 
+Celery worker is used to run background task to get all the historic transaction fees.
 
-All together it uses Web3 library and Alchemy as its remote node provider, Crypto Compare API, and Ether Scan API 
-to get the transaction fee.
+Furthermore, it uses Web3 library and Alchemy as its remote node provider, Crypto Compare API, and Ether Scan API 
+to get the final transaction fee.
 
 Since Binance API was banned in Singapore, I had to look for an alternative API that exposes ETH/USDC exchange fee.
 [Crypto Compare API](https://min-api.cryptocompare.com/documentation?key=Historical&cat=dataHistohour)
@@ -22,7 +23,7 @@ Because of this, hourly price will be used.
 ## Getting Started
 
 ### GET API KEY
-Free versions of the API KEY can be found in `app/config.py`.\
+Free versions of the API KEY can be found in `web/config.py`.\
 For better availability replace it with your own with less limitation.
 
 ### Install
@@ -71,7 +72,7 @@ Content-Length: 22
 
 REQUEST: 
 ```commandline
-curl -i -H 'Accept: application/json' 'http://localhost:8000/v1/fee?start_time=1620299304&end_time=1620300304'
+curl -i -H 'Accept: application/json' http://localhost:8000/v1/fee?start_time=1620299304&end_time=1620299904
 ```
 
 RESPONSE: 
@@ -103,6 +104,26 @@ Content-Type: application/json
 Content-Length: 51
 
 {"task_id": "9daf389e-bbab-4c5f-9ffa-396574aa069e"}
+```
+
+
+### GET status of task
+`POST /v1/status/<task_id>`
+
+REQUEST: 
+```commandline
+curl -i -H 'Accept: application/json' http://localhost:8000/v1/status/9daf389e-bbab-4c5f-9ffa-396574aa069e
+```
+RESPONSE:
+```
+HTTP/1.1 200 OK
+Server: gunicorn
+Date: Sun, 16 Oct 2022 13:12:55 GMT
+Connection: close
+Content-Type: application/json
+Content-Length: 26
+
+{"queue_state": "PENDING"}
 ```
 
 ## TODO

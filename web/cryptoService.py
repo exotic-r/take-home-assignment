@@ -47,7 +47,8 @@ class CryptoService:
         transaction = self.w3.eth.get_transaction(tx_hash)
 
         receipt = self.w3.eth.get_transaction_receipt(tx_hash)
-        timestamp = self.w3.eth.get_block(transaction['blockNumber']).get('timestamp')
+        timestamp = self.w3.eth.get_block(
+            transaction['blockNumber']).get('timestamp')
 
         fee, _ = self.__calculate_tx_fee(
             transaction['gasPrice'], receipt['gasUsed'], timestamp)
@@ -63,6 +64,10 @@ class CryptoService:
         """
         start_block, end_block = self.__get_block_number(
             start_time), self.__get_block_number(end_time)
+
+        if 'Error! Invalid timestamp' in (start_block, end_block):
+            raise InvalidTimestamp(start_time, end_time)
+
         seen_transactions = set()
 
         def request_fees(page_: int):
@@ -73,53 +78,54 @@ class CryptoService:
                 raise response.raise_for_status()
 
             response_json = response.json()
-            if response_json['message'] == 'No transactions found' or not response_json.get('result'):
-                raise TransactionNotFoundExceptionByTimeRange(
-                    start_time, end_time)
 
             chuck = []
             status_code_ = HTTPStatus.OK
+            last_processed_timestamp = -1
 
-            for result in response_json['result']:
-                tx_hash = result['hash']
-                if tx_hash in seen_transactions:
-                    continue
+            if response_json['result']:
+                for result in response_json['result']:
+                    tx_hash = result['hash']
+                    if tx_hash in seen_transactions:
+                        continue
 
-                seen_transactions.add(tx_hash)
-                cached_data = self.redis.get(tx_hash)
-                if cached_data is not None:
-                    chuck.append(
-                        Decimal(cached_data.decode('utf-8').strip('"')))
-                else:
-                    fee, status_code_ = self.__calculate_tx_fee(result['gasPrice'], result['gasUsed'],
-                                                                result['timeStamp'])
-                    if status_code_ in (550, HTTPStatus.TOO_MANY_REQUESTS):
-                        break
-                    chuck.append(fee)
-                    self.redis.set(tx_hash, json.dumps(str(fee)))
+                    seen_transactions.add(tx_hash)
+                    cached_data = self.redis.get(tx_hash)
+                    if cached_data is not None:
+                        chuck.append(
+                            Decimal(cached_data.decode('utf-8').strip('"')))
+                    else:
+                        fee, status_code_ = self.__calculate_tx_fee(result['gasPrice'], result['gasUsed'],
+                                                                    result['timeStamp'])
+                        if status_code_ in (550, HTTPStatus.TOO_MANY_REQUESTS):
+                            break
+                        chuck.append(fee)
+                        self.redis.set(tx_hash, json.dumps(str(fee)))
 
-            last_processed_timestamp = response_json['result'][-1]['timeStamp']
+                last_processed_timestamp = response_json['result'][-1]['timeStamp']
             return chuck, status_code_, last_processed_timestamp
 
         page = 1
-        last_processed_time = 0
         fees = []
 
-        while len(fees) % ETHER_SCAN_OFFSET == 0:
+        while True:
             fees_chuck, status_code, last_processed_time = request_fees(page)
             fees.extend(fees_chuck)
 
             if len(fees) >= MAX_FEES_PER_REQUEST:
+                fees = fees[:MAX_FEES_PER_REQUEST]
                 logging.info(
                     f"Processed {len(fees)} transactions, use separate request to get fees")
                 break
             if status_code == HTTPStatus.TOO_MANY_REQUESTS:
                 break
+            if len(fees) % ETHER_SCAN_OFFSET == 0:
+                break
 
             page += 1
 
         # TODO: since there is a max_cap on the number of transactions to return in a single api call
-        # could we useful to use <last_processed_time> inform the caller the last processed time
+        # could we useful to use <last_processed_time> to inform the caller the last processed time
         return fees, last_processed_time
 
     def get_historic_fees(self):
@@ -232,14 +238,16 @@ class CryptoService:
             return Decimal(0), status_code
 
         if response_json.get('Response') != 'Success':
-            logging.error("Failed to get ETH/USDC exchange rate, defaulting to 0")
+            logging.error(
+                "Failed to get ETH/USDC exchange rate, defaulting to 0")
             return Decimal(0), 500
 
         try:
             # TODO: do better finding the closest price by timestamp
             fx_rate = Decimal(response_json['Data']['Data'][1]['open'])
         except RuntimeError as e:
-            logging.error(f"Failed to get ETH/USDC exchange rate, defaulting to 0 error_msg: {e}")
+            logging.error(
+                f"Failed to get ETH/USDC exchange rate, defaulting to 0 error_msg: {e}")
             return Decimal(0), 500
 
         return fx_rate, status_code

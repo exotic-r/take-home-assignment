@@ -72,7 +72,7 @@ def transaction_fee_by_time_range():
             status=e.response.status_code,
             mimetype='application/json'
         )
-    except TransactionNotFoundExceptionByTimeRange as e:
+    except InvalidTimestamp as e:
         return app.response_class(
             response=json.dumps({'message': str(e)}),
             status=HTTPStatus.BAD_REQUEST,
@@ -94,7 +94,7 @@ def task_get_historic_transaction():
 def task_status(task_id):
     task = get_historic_transaction.AsyncResult(task_id)
     return app.response_class(
-        response=json.dumps({'queue_state': task.state}),
+        response=json.dumps({'state': task.state}),
         status=HTTPStatus.OK,
         mimetype='application/json'
     )
