@@ -1,7 +1,7 @@
 from redis.client import Redis
 from celery import Celery
 
-from web.cryptoService import CryptoService
+from cryptoService import CryptoService
 
 celery = Celery(
     'worker',

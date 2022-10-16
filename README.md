@@ -33,13 +33,14 @@ Docker: [How to install Docker](https://docs.docker.com/get-docker/)
 ```commandline
 git clone https://github.com/exotic-r/take-home-assignment.git
 cd take-home-assignment
-docker-compose build
-docker-compose up -d
+docker-compose up -d --build
 ```
 
-### Run tests
+### Run functional tests
 
 ```commandline
+# after running the app
+
 cd take-home-assignment
 python3 -m unittest
 ```
@@ -108,8 +109,7 @@ Content-Length: 51
 Due to the time constraints, a lot of shortcuts were make.'
 Below are the list of things to explore for future development.
 
-- write more tests
-- complete readme
+- write unit tests
 - retry logic 
 - health check endpoint
 - dashboard to monitor background task status

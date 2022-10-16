@@ -9,8 +9,8 @@ from eth_typing import HexStr
 from redis.client import Redis
 from web3 import Web3
 
-from web.exceptions import *
-from web.utils import *
+from exceptions import *
+from utils import *
 
 
 class CryptoService:

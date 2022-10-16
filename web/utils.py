@@ -1,4 +1,4 @@
-from web.config import *
+from config import *
 
 
 def get_ether_scan_params(start_block, end_block, page, offset=10) -> dict:

@@ -1,21 +1,17 @@
 import unittest
+import requests
 from unittest import TestCase
-from unittest.mock import MagicMock, patch
-
-from web.cryptoService import CryptoService
-
 
 class TestCryptoService(TestCase):
+    base_url = 'http://0.0.0.0:8000/v1'
 
-    @patch('redis.Redis')
-    def test_get_transaction_fee_by_tx_hash(self, mock_redis):
-        tx_hash = '0x1234'
-        expected = 100.0
+    def test_successfuly_get_transaction_fee_by_tx_hash(self):
+        # https://etherscan.io/tx/0x8d3e463cdab56374495e5e26b2ab7a6ba271708d919e4d2eb391bf0f2cad44d7
+        tx_hash = '0x8d3e463cdab56374495e5e26b2ab7a6ba271708d919e4d2eb391bf0f2cad44d7'
+        response = requests.get(f'{self.base_url}/fee/{tx_hash}')
+        result = response.json().get('fee')
 
-        service = CryptoService(mock_redis)
-        result = service.get_transaction_fee_by_tx_hash(tx_hash)
-
-        self.assertEqual(result, expected)
+        self.assertAlmostEqual(result, 3.13, 2)
 
 
 if __name__ == '__main__':
