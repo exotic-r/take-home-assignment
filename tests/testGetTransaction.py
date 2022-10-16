@@ -37,6 +37,20 @@ class TestGetTransaction(TestCase):
 
         self.assertEqual(result, expected)
 
+    def test_get_fee_by_time_range_and_action(self):
+        start, end = 1620299304, 1620299904
+        action = 'tokentx'
+        response = requests.get(
+            f'{self.base_url}/fee?start_time={start}&end_time={end}&action_type={action}')
+        result = response.json().get('fees')
+        expected = [31.267892702199998,
+                    36.911568375,
+                    33.7032459876,
+                    44.532188315999996,
+                    37.2460448772]
+
+        self.assertEqual(result, expected)
+
     def test_get_empty_result_by_time_range(self):
         start, end = 1620299302, 1620299302
         response = requests.get(

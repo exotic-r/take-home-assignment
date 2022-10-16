@@ -15,6 +15,14 @@ class TransactionNotFoundExceptionByTimeRange(Exception):
         return f'No transaction found between timestamp {self.start_time} and {self.end_time}'
 
 
+class ActionTypeNotFoundException(Exception):
+    def __init__(self, action_type):
+        self.action_type = action_type
+
+    def __str__(self):
+        return f'Invalid action type: {self.action_type}'
+
+
 class InvalidTimestamp(Exception):
     def __init__(self, start_time, end_time):
         self.start_time = start_time

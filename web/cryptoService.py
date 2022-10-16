@@ -46,6 +46,8 @@ class CryptoService:
 
         transaction = self.w3.eth.get_transaction(tx_hash)
 
+        # TODO: need verify if transaction is on uniswap
+
         receipt = self.w3.eth.get_transaction_receipt(tx_hash)
         timestamp = self.w3.eth.get_block(
             transaction['blockNumber']).get('timestamp')
@@ -55,11 +57,12 @@ class CryptoService:
         self.redis.set(tx_hash, json.dumps(str(fee)))
         return fee
 
-    def get_transactions_fee_by_time_range(self, start_time: int, end_time: int) -> tuple[list[Decimal], int]:
+    def get_transactions_fee_by_time_range(self, start_time: int, end_time: int, action_type: str) -> tuple[list[Decimal], int]:
         """
         Get a list of transaction fees between 2 time range
         :param start_time:
         :param end_time:
+        :param action_type:
         :return: fees
         """
         start_block, end_block = self.__get_block_number(
@@ -72,12 +75,14 @@ class CryptoService:
 
         def request_fees(page_: int):
             params = get_ether_scan_params(
-                start_block, end_block, page_, ETHER_SCAN_OFFSET)
+                start_block, end_block, page_, action_type)
             response = requests.get(ETHER_SCAN_BASE_URL, params=params)
             if response.status_code != HTTPStatus.OK:
                 raise response.raise_for_status()
 
             response_json = response.json()
+            if response_json.get('result') == 'Error! Missing Or invalid Action name':
+                raise ActionTypeNotFoundException(action_type)
 
             chuck = []
             status_code_ = HTTPStatus.OK
@@ -128,21 +133,25 @@ class CryptoService:
         # could we useful to use <last_processed_time> to inform the caller the last processed time
         return fees, last_processed_time
 
-    def get_historic_fees(self):
+    def get_historic_fees(self, action_type: str):
         """
         Background task to get all the historical fees
+        :param action_type:
         :return: None
         """
         page = 0
 
         while True:
             params = get_ether_scan_params(
-                self.last_processed_block, END_BLOCK, page, ETHER_SCAN_OFFSET)
+                self.last_processed_block, END_BLOCK, page, action_type)
             response = requests.get(ETHER_SCAN_BASE_URL, params=params)
             if response.status_code != HTTPStatus.OK:
                 raise response.raise_for_status()
 
             response_json = response.json()
+            if response_json.get('result') == 'Error! Missing Or invalid Action name':
+                raise ActionTypeNotFoundException(action_type)
+
             result = response_json['result']
 
             if not result:

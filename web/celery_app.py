@@ -13,5 +13,5 @@ service = CryptoService(redis)
 
 
 @celery.task(name='tasks.get_historic_transaction')
-def get_historic_transaction():
-    service.get_historic_fees()
+def get_historic_transaction(action_type: str):
+    service.get_historic_fees(action_type)

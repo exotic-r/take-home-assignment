@@ -68,7 +68,12 @@ Content-Length: 22
 ```
 
 ### GET transaction fee by time range
-`GET /v1/fee?start_time=<start_time>&end_time=<end_time>`
+`GET /v1/fee?start_time=<start_time>&end_time=<end_time>?action_type=<action_type>`
+
+actionType is optional, default value is 'tokentx' (ERC20) since most of the transaction are ERC20
+- txlist: normal transaction
+- txlistinternal: internal transaction
+- tokennfttx: ERC721 transaction
 
 REQUEST: 
 ```commandline
@@ -90,9 +95,16 @@ Content-Length: 179
 ### POST trigger background task to get historical transaction fee
 `POST /v1/`
 
+actionType is optional, default value is 'tokentx' (ERC20) since most of the transactions are ERC20
+- txlist: normal transaction
+- txlistinternal: internal transaction
+- tokennfttx: ERC721 transaction
+
 REQUEST: 
 ```commandline
 curl -i -X POST http://localhost:8000/v1/
+
+curl --data 'action_type=tokentx' -X POST http://localhost:8000/v1/
 ```
 RESPONSE:
 ```

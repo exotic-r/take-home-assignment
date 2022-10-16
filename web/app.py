@@ -48,6 +48,7 @@ def transaction_fee_by_time_range():
     args = request.args
     start_time = args.get('start_time')
     end_time = args.get('end_time')
+    action_type = args.get('action_type', 'tokentx')
 
     if not start_time or not end_time:
         return app.response_class(
@@ -59,7 +60,7 @@ def transaction_fee_by_time_range():
 
     try:
         result = service.get_transactions_fee_by_time_range(
-            int(start_time), int(end_time))
+            int(start_time), int(end_time), action_type)
 
         return app.response_class(
             response=json.dumps({'fees': result[0]}),
@@ -72,7 +73,7 @@ def transaction_fee_by_time_range():
             status=e.response.status_code,
             mimetype='application/json'
         )
-    except InvalidTimestamp as e:
+    except (InvalidTimestamp, ActionTypeNotFoundException) as e:
         return app.response_class(
             response=json.dumps({'message': str(e)}),
             status=HTTPStatus.BAD_REQUEST,
@@ -82,7 +83,10 @@ def transaction_fee_by_time_range():
 
 @app.route('/v1/', methods=['POST'])
 def task_get_historic_transaction():
-    task = get_historic_transaction.delay()
+    args = request.args
+    action_type = args.get('action_type', 'tokentx')
+
+    task = get_historic_transaction.delay(action_type)
     return app.response_class(
         response=json.dumps({'task_id': task.id}),
         status=HTTPStatus.OK,
