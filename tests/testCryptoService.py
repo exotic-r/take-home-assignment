@@ -2,7 +2,7 @@ import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
-from app.cryptoService import CryptoService
+from web.cryptoService import CryptoService
 
 
 class TestCryptoService(TestCase):

@@ -34,13 +34,14 @@ Docker: [How to install Docker](https://docs.docker.com/get-docker/)
 git clone https://github.com/exotic-r/take-home-assignment.git
 cd take-home-assignment
 docker-compose build
-docker-compose up
+docker-compose up -d
 ```
 
 ### Run tests
 
 ```commandline
-
+cd take-home-assignment
+python3 -m unittest
 ```
 
 ## REST API

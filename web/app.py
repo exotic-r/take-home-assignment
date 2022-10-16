@@ -12,7 +12,7 @@ from web.exceptions import *
 from web.celery_app import get_historic_transaction
 
 app = Flask(__name__)
-redis = Redis(host='redis')
+redis = Redis(host='localhost')
 service = CryptoService(redis)
 
 logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s',
