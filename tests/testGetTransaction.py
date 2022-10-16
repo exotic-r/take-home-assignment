@@ -61,14 +61,14 @@ class TestGetTransaction(TestCase):
         self.assertTrue(result)
 
         response = requests.get(f'{self.base_url}/status/{result}')
-        result = response.json().get('queue_state')
+        result = response.json().get('state')
 
         self.assertIn(result, celery.states.ALL_STATES)
 
     def test_invalid_task_id_status(self):
         task_id = 12345678
         response = requests.get(f'{self.base_url}/status/{task_id}')
-        result = response.json().get('queue_state')
+        result = response.json().get('state')
 
         # default behaviour by celery
         self.assertEqual(result, celery.states.PENDING)
